@@ -13,6 +13,7 @@ cc_library(
             "rocm/rocm_platform_id.cc",
             "lib/*.cc",
             "platform/default/*.cc",
+            "streamTracer.o"
         ],
         exclude = [
             "**/*_test.cc",
@@ -50,9 +51,10 @@ cc_library(
             exclude = ["cuda/cuda_platform_id.cc"],
         ),
     ),
+    hdrs = ["//tensorflow/core:tensorflowTracer.h"],
     linkopts = select({
         "//tensorflow:freebsd": [],
-        "//conditions:default": ["-ldl"],
+        "//conditions:default": ["-ldl", "-llttng-ust"],
     }),
     visibility = ["//visibility:public"],
     deps = [

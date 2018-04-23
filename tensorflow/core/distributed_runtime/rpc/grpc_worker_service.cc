@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-
+#include "grpcTracer.h"
 #include "tensorflow/core/distributed_runtime/rpc/grpc_worker_service.h"
 
 #include <deque>
@@ -175,6 +175,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
                           RequestMessage, ResponseMessage>;
 
   void GetStatusHandler(WorkerCall<GetStatusRequest, GetStatusResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "GetStatus");
     Schedule([this, call]() {
       Status s = worker_->GetStatus(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -185,6 +186,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
   void CreateWorkerSessionHandler(
       WorkerCall<CreateWorkerSessionRequest, CreateWorkerSessionResponse>*
           call) {
+    tracepoint(grpcTracer, receive_request, "CreateWorkerSession");
     Schedule([this, call]() {
       Status s = worker_->CreateWorkerSession(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -194,6 +196,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
 
   void CleanupAllHandler(
       WorkerCall<CleanupAllRequest, CleanupAllResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "CleanupAll");
     Schedule([this, call]() {
       Status s = worker_->CleanupAll(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -203,6 +206,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
 
   void RegisterGraphHandler(
       WorkerCall<RegisterGraphRequest, RegisterGraphResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "RegisterGraph");
     Schedule([this, call]() {
       Status s = worker_->RegisterGraph(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -212,6 +216,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
 
   void DeregisterGraphHandler(
       WorkerCall<DeregisterGraphRequest, DeregisterGraphResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "DeregisterGraph");
     Schedule([this, call]() {
       Status s = worker_->DeregisterGraph(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -220,6 +225,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
   }
 
   void RunGraphHandler(WorkerCall<RunGraphRequest, RunGraphResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "RunGraph");
     Schedule([this, call]() {
       CallOptions* call_opts = new CallOptions;
       ProtoRunGraphRequest* wrapped_request =
@@ -242,11 +248,17 @@ class GrpcWorkerService : public AsyncServiceInterface {
 
   void RecvTensorHandlerRaw(
       WorkerCall<RecvTensorRequest, ::grpc::ByteBuffer>* call) {
+    tracepoint(grpcTracer, receive_RecvTensor_request, "grpc", "RecvTensor", 
     Schedule([this, call]() {
       CallOptions* call_opts = new CallOptions;
       call->SetCancelCallback([call_opts]() { call_opts->StartCancel(); });
       worker_->RecvTensorAsync(call_opts, &call->request, &call->response,
                                [call, call_opts](const Status& s) {
+                                 tracepoint(grpcTracer, 
+                                     prepare_response_tensor_end, 
+                                     "grpc_prepare_response_tensor", 
+                                     "prepare_response_tensor", 
+                                     call->request.rendezvous_key().c_str());
                                  call->ClearCancelCallback();
                                  delete call_opts;
                                  call->SendResponse(ToGrpcStatus(s));
@@ -257,6 +269,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
 
   void CleanupGraphHandler(
       WorkerCall<CleanupGraphRequest, CleanupGraphResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "CleanupGraph");
     Schedule([this, call]() {
       Status s = worker_->CleanupGraph(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -265,6 +278,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
   }
 
   void LoggingHandler(WorkerCall<LoggingRequest, LoggingResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "Logging");
     Schedule([this, call]() {
       Status s = worker_->Logging(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -273,6 +287,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
   }
 
   void TracingHandler(WorkerCall<TracingRequest, TracingResponse>* call) {
+    tracepoint(grpcTracer, receive_request, "Tracing");
     Schedule([this, call]() {
       Status s = worker_->Tracing(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(s));
@@ -310,6 +325,8 @@ void GrpcWorker::RecvTensorAsync(CallOptions* opts,
                                  StatusCallback done) {
   const int64 step_id = request->step_id();
   const string& key = request->rendezvous_key();
+  tracepoint(grpcTracer, prepare_response_tensor_start, 
+      "grpc_prepare_response_tensor", "prepare_response_tensor", key.c_str());         
   TRACEPRINTF("RecvTensor: %lld %s", step_id, key.c_str());
   Rendezvous::ParsedKey parsed;
   Status s = Rendezvous::ParseKey(key, &parsed);
@@ -357,7 +374,8 @@ void GrpcWorker::RecvTensorAsync(CallOptions* opts,
                                                tmp](const Status& s) {
                 // The value is now ready to be returned on the wire.
                 tmp->set_send_start_micros(Env::Default()->NowMicros());
-
+                tracepoint(grpcTracer, set_proto_from_gpu_end, 
+                                    "grpc_prepare_response_tensor", "SetProtoFromGPU", key.c_str());
                 grpc::EncodeRecvTensorResponseToByteBuffer(*tmp, response);
                 done(s);
                 delete tmp;
@@ -370,6 +388,9 @@ void GrpcWorker::RecvTensorAsync(CallOptions* opts,
               // serializing that (i.e. figure out how to use
               // EncodeTensorToByteBuffer on this path rather than
               // EncodeRecvTensorResponseToByteBuffer)
+              tracepoint(grpcTracer, set_proto_from_gpu_start, 
+                  "grpc_prepare_response_tensor", "SetProtoFromGPU", 
+                  key.c_str());
               GPUUtil::SetProtoFromGPU(val, src_dev, send_dev_context,
                                        tmp->mutable_tensor(), is_dead,
                                        response_ready);

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "tensorflow/core/tensorflowTracer.h"
 #include "tensorflow/core/framework/rendezvous.h"
 
 #include <functional>
@@ -156,6 +157,7 @@ class LocalRendezvousImpl : public Rendezvous {
     Args recv_args;
     uint64 key_hash = KeyHash(key.FullKey());
     VLOG(2) << "Send " << this << " " << key_hash << " " << key.FullKey();
+    tracepoint(tensorflowTracer, rdv_send, "rendezvous", key.FullKey().data());
     {
       mutex_lock l(mu_);
       if (!status_.ok()) {
@@ -216,6 +218,7 @@ class LocalRendezvousImpl : public Rendezvous {
     // Notify the waiter by invoking its done closure, outside scope
     // of the table lock.
     waiter(Status::OK(), send_args, recv_args, val, is_dead);
+    tracepoint(tensorflowTracer, rdv_recv, "rendezvous", key.FullKey().data());
     if (recv_args.device_context) recv_args.device_context->Unref();
     return Status::OK();
   }
@@ -243,6 +246,7 @@ class LocalRendezvousImpl : public Rendezvous {
         // A message has already arrived and is stored in the table
         // under this key.  Consumes the message and invokes the done
         // closure.
+        tracepoint(tensorflowTracer, rdv_recv, "rendezvous", key.FullKey().data());
         Tensor v = item->value;
         if (!tolerate_dup_recv_) {
           item->value = Tensor();
