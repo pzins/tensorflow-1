@@ -1598,8 +1598,9 @@ Stream &Stream::ThenMemcpyD2HQuantized(
     dnn::QuantizedActivationMode mode, void *host_dst, uint64 size) {
   VLOG_CALL(PARAM(gpu_unquantized_src), PARAM(mode), PARAM(host_dst),
             PARAM(size));
-  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy D2H quantized");
-
+  std::string name = "memcpy D2H quantized " + std::to_string(size);
+  tracepoint(streamTracer, memcpy_start, "stream_memcpy", name.c_str(), size);
+  
   if (ok()) {
     if (dnn::DnnSupport *dnn = parent_->AsDnn()) {
       CheckError(dnn->DoMemcpyD2HQuantized(this, gpu_unquantized_src, mode,
@@ -1617,7 +1618,8 @@ Stream &Stream::ThenMemcpyH2DQuantized(
     DeviceMemory<float> *gpu_unquantized_dst) {
   VLOG_CALL(PARAM(host_src), PARAM(size), PARAM(mode),
             PARAM(gpu_unquantized_dst));
-  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy H2D quantized");
+  std::string name = "memcpy H2D quantized " + std::to_string(size);
+  tracepoint(streamTracer, memcpy_start, "stream_memcpy", name.c_str() , size);
   if (ok()) {
     if (dnn::DnnSupport *dnn = parent_->AsDnn()) {
       CheckError(dnn->DoMemcpyH2DQuantized(this, host_src, size, mode,
@@ -1633,7 +1635,7 @@ Stream &Stream::ThenMemcpyH2DQuantized(
 Stream &Stream::ThenCopyHostBuffer2Device(
     HostBuffer *buffer_src, DeviceMemory<float> *gpu_unquantized_dst) {
   VLOG_CALL(PARAM(*buffer_src), PARAM(gpu_unquantized_dst));
-  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy host buffer 2 device");
+  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy host buffer 2 device", 0);
   if (ok()) {
     if (dnn::DnnSupport *dnn = parent_->AsDnn()) {
       CheckError(
@@ -1649,7 +1651,7 @@ Stream &Stream::ThenCopyHostBuffer2Device(
 Stream &Stream::ThenCopyDevice2HostBuffer(
     const DeviceMemory<float> &gpu_unquantized_src, HostBuffer *buffer_dst) {
   VLOG_CALL(PARAM(gpu_unquantized_src), PARAM(*buffer_dst));
-  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy device 2 host buffer");
+  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy device 2 host buffer", 0);
   if (ok()) {
     if (dnn::DnnSupport *dnn = parent_->AsDnn()) {
       CheckError(
@@ -4311,7 +4313,8 @@ Stream &Stream::ThenPopulateRandUniform(
 Stream &Stream::ThenMemcpy(void *host_dst, const DeviceMemoryBase &gpu_src,
                            uint64 size) {
   VLOG_CALL(PARAM(host_dst), PARAM(gpu_src), PARAM(size));
-  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy D2H");
+  std::string name = "memcpy D2H " + std::to_string(size);
+  tracepoint(streamTracer, memcpy_start, "stream_memcpy", name.c_str() , size);
   if (ok()) {
     CheckError(parent_->Memcpy(this, host_dst, gpu_src, size));
   } else {
@@ -4325,8 +4328,8 @@ Stream &Stream::ThenMemcpy(void *host_dst, const DeviceMemoryBase &gpu_src,
 Stream &Stream::ThenMemcpy(DeviceMemoryBase *gpu_dst, const void *host_src,
                            uint64 size) {
   VLOG_CALL(PARAM(gpu_dst), PARAM(host_src), PARAM(size));
-  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy H2D");
-
+  std::string name = "memcpy H2D " + std::to_string(size);
+  tracepoint(streamTracer, memcpy_start, "stream_memcpy", name.c_str(), size);
   if (ok()) {
     CheckError(parent_->Memcpy(this, gpu_dst, host_src, size));
   } else {
@@ -4340,7 +4343,8 @@ Stream &Stream::ThenMemcpy(DeviceMemoryBase *gpu_dst, const void *host_src,
 Stream &Stream::ThenMemcpy(DeviceMemoryBase *gpu_dst,
                            const DeviceMemoryBase &gpu_src, uint64 size) {
   VLOG_CALL(PARAM(gpu_dst), PARAM(gpu_src), PARAM(size));
-  tracepoint(streamTracer, memcpy_start, "stream_memcpy", "memcpy D2D");
+  std::string name = "memcpy D2D " + std::to_string(size);
+  tracepoint(streamTracer, memcpy_start, "stream_memcpy", name.c_str(), size);
 
   if (ok()) {
     CheckError(parent_->MemcpyDeviceToDevice(this, gpu_dst, gpu_src, size));
