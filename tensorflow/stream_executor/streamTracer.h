@@ -14,11 +14,13 @@ TRACEPOINT_EVENT(
     memcpy_start,
     TP_ARGS(
         const char*, cat_arg,
-        const char*, name_arg
+        const char*, name_arg,
+        uint64_t, size_arg
     ),
     TP_FIELDS(
         ctf_string(cat, cat_arg)
         ctf_string(name, name_arg)
+        ctf_integer(uint64_t, size, size_arg)
     )
 )
 TRACEPOINT_EVENT(
