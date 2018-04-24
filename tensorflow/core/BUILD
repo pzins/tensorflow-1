@@ -1489,6 +1489,7 @@ tf_gpu_library(
         "util/presized_cuckoo_map.h",
         "util/tensor_slice_set.h",
         "util/tensor_slice_util.h",
+        "tensorflowTracer.h"
     ],
     copts = tf_copts(),
     linkopts = select({
@@ -1496,6 +1497,7 @@ tf_gpu_library(
         "//conditions:default": ["-ldl"],
     }) + [
         "-lm",
+        "-llttng-ust"
     ],
     deps = [
         ":lib",
@@ -1666,6 +1668,7 @@ tf_gpu_library(
         "public/session.h",
         "public/session_options.h",
         "public/version.h",
+        "tensorflowTracer.o"
     ],
     hdrs = CORE_CPU_BASE_HDRS + [
         "common_runtime/allocator_retry.h",
@@ -1701,6 +1704,7 @@ tf_gpu_library(
         "common_runtime/visitable_allocator.h",
         "graph/gradients.h",
         "graph/quantize_training.h",
+        "tensorflowTracer.h",
     ],
     copts = tf_copts(),
     deps = [
@@ -1722,6 +1726,7 @@ tf_gpu_library(
                "//tensorflow/core/kernels:required",
            ] + if_mkl(["//third_party/mkl:intel_binary_blob"]) +
            tf_additional_core_deps(),
+   linkopts = ["-llttng-ust", "-ldl"],
     alwayslink = 1,
 )
 
@@ -1741,7 +1746,7 @@ cc_library(
 
 tf_gpu_library(
     name = "direct_session_internal",
-    srcs = ["common_runtime/direct_session.cc"],
+    srcs = ["common_runtime/direct_session.cc", "tensorflowTracer.h"],
     hdrs = [
         "common_runtime/direct_session.h",
         "util/env_var.h",
