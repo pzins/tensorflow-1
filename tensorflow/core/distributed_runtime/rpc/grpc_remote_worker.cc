@@ -31,7 +31,7 @@ limitations under the License.
 #include "tensorflow/core/lib/strings/str_util.h"
 #include "tensorflow/core/platform/grpc_response_reader.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core//tracing.h"
+#include "tensorflow/core/platform/tracing.h"
 #include "tensorflow/core/protobuf/worker.pb.h"
 
 namespace tensorflow {
@@ -152,7 +152,7 @@ class GrpcRemoteWorker : public WorkerInterface {
                       start_usec](Status s) {
         const string& key = request->rendezvous_key();
         std::vector<string> key_parts = str_util::Split(key, ';');
-        tracepoint(grpcTracer, send_request_tensor_end, "grpc_send_request_tensor", "send_request_tensor", key.c_str());  
+        tracepoint(grpcTracer, send_request_tensor_end, "grpc_send_request_tensor", "send_request_tensor", key.c_str());
         if (logger_->LoggingActive()) {
           int64 end_usec = Env::Default()->NowMicros();
           int64 step_id = request->step_id();
