@@ -1746,10 +1746,11 @@ cc_library(
 
 tf_gpu_library(
     name = "direct_session_internal",
-    srcs = ["common_runtime/direct_session.cc", "tensorflowTracer.h"],
+    srcs = ["common_runtime/direct_session.cc"],
     hdrs = [
         "common_runtime/direct_session.h",
         "util/env_var.h",
+        "tensorflowTracer.h",
     ],
     copts = tf_copts(),
     gpu_deps = [
